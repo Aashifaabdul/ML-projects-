@@ -1,0 +1,120 @@
+#importing the dependencies
+import re
+import numpy as np
+import pandas as pd
+
+# nltk
+from nltk.stem import WordNetLemmatizer
+
+# sklearn
+from sklearn.svm import LinearSVC
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+import string
+
+#Read and Load the Dataset
+# Importing the dataset
+DATASET_COLUMNS=['target','ids','date','flag','user','text']
+DATASET_ENCODING = "ISO-8859-1" # encode in the range of 127 to 255
+df = pd.read_csv(r'C:\Users\aashi\Downloads\30ktweets.csv', encoding=DATASET_ENCODING, names=DATASET_COLUMNS)
+
+#DATASET PREPROCESSING 
+import re
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
+corpus = []
+for i in range(0, 30627):
+  text = re.sub('[^a-zA-Z]', ' ', df['text'][i])
+  text = text.lower()
+  text = text.split()
+  ps = PorterStemmer()
+  all_stopwords = stopwords.words('english')
+  all_stopwords.remove('not')
+  text = [ps.stem(word) for word in text if not word in set(all_stopwords)]
+  text = ' '.join(text)
+  corpus.append(text)
+
+  #VECTORIZING
+from sklearn.feature_extraction.text import CountVectorizer
+cv = CountVectorizer(max_features = 1500)
+X = cv.fit_transform(corpus).toarray()
+y = df.iloc[:, 0].values
+
+#TEST TRAIN SPLITTING 
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20, random_state = 0)
+
+#MODEL TRAINING
+from sklearn.linear_model import LogisticRegression
+classifier = LogisticRegression()
+classifier.fit(X_train,y_train)
+
+y_pred = classifier.predict(X_test)
+np.concatenate((y_pred.reshape(len(y_pred),1), y_test.reshape(len(y_test),1)),1)
+
+def getInput():
+        input_text = input_entry.get()
+        new_text = re.sub('[^a-zA-Z]', ' ', input_text)
+        new_text = new_text.lower()
+        new_text = new_text.split()
+        ps = PorterStemmer()
+        all_stopwords = stopwords.words('english')
+        all_stopwords.remove('not')
+        new_text = [ps.stem(word) for word in new_text if not word in set(all_stopwords)]
+        new_corpus = ' '.join(new_text)
+        new_corpus = new_text
+        new_X_test = cv.transform(new_corpus).toarray()
+        def predict_output(tweet):
+            predicted = classifier.predict(tweet)
+            # Calculate the average probability across all words
+            average_probability = np.mean(predicted)
+
+            # Set the decision threshold (usually at 0.5 probability)
+            decision_threshold = 4
+
+            # Finalize the sentiment classification for the entire statement
+            if average_probability >= decision_threshold:
+                return  "YOUR TWEET IS POSITIVE"
+            else:
+                return "YOUR TWEET IS NEGATIVE"
+        prediction = predict_output(new_X_test )
+        output_label.config(text=prediction)
+#GUI
+from tkinter import *
+from PIL import Image,ImageTk
+
+root=Tk()
+root.title("TWEET CLASSIFICATION")
+root.geometry('800x600')
+image=Image.open(r"C:\Users\aashi\PycharmProjects\Helloworld\twitterbird.png")
+bg=ImageTk.PhotoImage(image)
+lbl=Label(root,image=bg)
+lbl.place(x=0,y=0)
+heading_label = Label(root, text="TWEET CLASSIFICATION", font=("Arial", 40),bg="grey")
+heading_label.pack(pady=100)
+heading_label.config(font=("verdana",30))
+
+
+
+label_text = Label(root, text="Enter your tweet:",font="Algeria")
+label_text.pack(side=TOP, padx=10, pady=10)
+
+feature1_var=StringVar()
+
+input_entry = Entry(root, font=("Arial", 16),textvariable=feature1_var)
+input_entry.pack()
+
+process_button = Button(root,text="ANALYSE",width=15, height=2,command=getInput)
+process_button.pack(side=TOP, padx=10, pady=10)
+
+button = Button(root, text="KNOWLEDGE GRAPH ")
+button.pack(side=BOTTOM, padx=10, pady=10)
+
+output_label =Label(root, text="", font=("Arial", 16))
+output_label.pack(pady=20)
+
+root.mainloop()
+
+  
